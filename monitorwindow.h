@@ -19,6 +19,7 @@
 const short TICK_LENGTH = 50;
 const short WINDOW_HEIGHT_OFFSET = 50;
 const short TEXT_LENGTH_MIN = 7;
+const short SIZE_DIFF_TOLERANCE = 1;
 const float SIZE_PERCENTAGE = 0.9f;
 
 const QString APP_NAME = "MonitorScreen";
@@ -47,6 +48,7 @@ public:
 
     void closeConnection();
     void resizeText();
+    bool isSimilarSize(int oldN, int newN);
     QString processText(QString text);
 
 private slots:
@@ -63,6 +65,7 @@ private:
     QUrl uri;
     QWebSocket socket;
     QLabel *text;
+    QString prevText;
     QFont font;
 };
 

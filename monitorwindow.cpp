@@ -1,7 +1,9 @@
 #include "monitorwindow.h"
 #include "ui_monitorwindow.h"
 
-MonitorWindow::MonitorWindow(QUrl quri, QWidget *parent) : uri(quri), QMainWindow(parent), ui(new Ui::MonitorWindow) {
+MonitorWindow::MonitorWindow(QUrl quri, QWidget *parent) : uri(quri),
+    QMainWindow(parent), ui(new Ui::MonitorWindow) {
+
     ui->setupUi(this);
     resize(QDesktopWidget().availableGeometry(this).size() * 0.5);
     setWindowState(Qt::WindowMaximized);
@@ -12,8 +14,10 @@ MonitorWindow::MonitorWindow(QUrl quri, QWidget *parent) : uri(quri), QMainWindo
     statusBar()->showMessage(DISCONNECTED_TEXT);
 
     QObject::connect(&socket, SIGNAL(connected()), this, SLOT(connected()));
-    QObject::connect(&socket, SIGNAL(disconnected()), this, SLOT(disconnected()));
-    QObject::connect(&socket, SIGNAL(textMessageReceived(QString)), this, SLOT(messageReceived(QString)));
+    QObject::connect(&socket, SIGNAL(disconnected()), this,
+                     SLOT(disconnected()));
+    QObject::connect(&socket, SIGNAL(textMessageReceived(QString)), this,
+                     SLOT(messageReceived(QString)));
 
     text = new QLabel(this);
     text->setAlignment(Qt::AlignCenter);
@@ -31,16 +35,19 @@ MonitorWindow::~MonitorWindow() {
 
 void MonitorWindow::on_actionExit_triggered() {
     if (QMessageBox::question(this, APP_NAME, EXIT_CONFIRM_TEXT,
-                              QMessageBox::Yes|QMessageBox::No) == QMessageBox::Yes) QApplication::quit();
+    QMessageBox::Yes|QMessageBox::No) == QMessageBox::Yes) QApplication::quit();
 }
 
 void MonitorWindow::on_actionConnect_triggered() {
     if (socket.state() == QAbstractSocket::ConnectedState) {
         if (QMessageBox::question(this, APP_NAME, DISCONNECT_CONFIRM_TEXT,
-                                   QMessageBox::Yes|QMessageBox::No) == QMessageBox::No) return;
+            QMessageBox::Yes|QMessageBox::No) == QMessageBox::No) return;
     }
     bool validUri;
-    QUrl newUri = QUrl(QInputDialog::getText(this, CONNECT_TEXT, WS_URI_TEXT, QLineEdit::Normal, uri.toString(), &validUri, Qt::WindowCloseButtonHint));
+
+    QUrl newUri = QUrl(QInputDialog::getText(this, CONNECT_TEXT, WS_URI_TEXT,
+    QLineEdit::Normal, uri.toString(), &validUri, Qt::WindowCloseButtonHint));
+
     if (validUri) uri = newUri;
     closeConnection();
 }
@@ -67,8 +74,12 @@ void MonitorWindow::messageReceived(QString message) {
     message = jsonObject[JSON_VALUE].toString();
 
     QString statusMessage = uri.toString();
-    if (jsonObject[JSON_NAME].toString() != "") statusMessage += STATUS_DELIMITER + jsonObject[JSON_NAME].toString();
-    if (jsonObject[JSON_TIME].toString() != "") statusMessage += STATUS_DELIMITER + jsonObject[JSON_TIME].toString();
+    if (jsonObject[JSON_NAME].toString() != "") {
+        statusMessage += STATUS_DELIMITER + jsonObject[JSON_NAME].toString();
+    }
+    if (jsonObject[JSON_TIME].toString() != "") {
+        statusMessage += STATUS_DELIMITER + jsonObject[JSON_TIME].toString();
+    }
 
     statusBar()->showMessage(statusMessage);
     text->setText(message);
@@ -82,14 +93,30 @@ void MonitorWindow::closeConnection() {
 }
 
 void MonitorWindow::resizeText() {
-    double widthFactor = QFontMetrics(text->font()).width(processText(text->text())) / double(rect().width());
-    double heightFactor = QFontMetrics(text->font()).height() / double(rect().width());
-    int pointSize_new = font.pointSize();
-    pointSize_new /= widthFactor > heightFactor ? widthFactor / SIZE_PERCENTAGE : heightFactor / SIZE_PERCENTAGE;
-    if (pointSize_new > 0) font.setPointSize(pointSize_new);
+    double widthFactor =
+            QFontMetrics(text->font()).width(processText(text->text()))
+            / double(rect().width());
+
+    double heightFactor = QFontMetrics(text->font()).height()
+            / double(rect().width());
+
+    int pointSize_old = font.pointSize();
+    int pointSize_new = pointSize_old;
+    pointSize_new /= widthFactor > heightFactor ?
+                widthFactor / SIZE_PERCENTAGE : heightFactor / SIZE_PERCENTAGE;
+
+    if (pointSize_new > 0 && !isSimilarSize(pointSize_old, pointSize_new)) {
+        font.setPointSize(pointSize_new);
+    }
     text->setFont(font);
     windowSize.setWidth(rect().width());
     windowSize.setHeight(rect().height());
+}
+
+bool MonitorWindow::isSimilarSize(int oldN, int newN) {
+    // Returns true if the difference between two values
+    // is less than or equal to a specified tolerance value
+    return (oldN > newN ? oldN - newN : newN - oldN) <= SIZE_DIFF_TOLERANCE;
 }
 
 QString MonitorWindow::processText(QString text) {
@@ -100,6 +127,9 @@ QString MonitorWindow::processText(QString text) {
 }
 
 void MonitorWindow::update() {
-    if (socket.state() == QAbstractSocket::UnconnectedState && !uri.isEmpty()) socket.open(QUrl(uri));
-    if (windowSize.width() != rect().width() || windowSize.height() != rect().height()) resizeText();
+    if (socket.state() == QAbstractSocket::UnconnectedState && !uri.isEmpty()) {
+        socket.open(QUrl(uri));
+    }
+    if (windowSize.width() != rect().width()
+            || windowSize.height() != rect().height()) resizeText();
 }
