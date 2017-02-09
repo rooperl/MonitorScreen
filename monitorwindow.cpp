@@ -39,7 +39,9 @@ void MonitorWindow::on_actionConnect_triggered() {
         if (QMessageBox::question(this, APP_NAME, DISCONNECT_CONFIRM_TEXT,
                                    QMessageBox::Yes|QMessageBox::No) == QMessageBox::No) return;
     }
-    uri = QUrl(QInputDialog::getText(this, CONNECT_TEXT, WS_URI_TEXT, QLineEdit::Normal, uri.toString(), nullptr, Qt::WindowCloseButtonHint));
+    bool validUri;
+    QUrl newUri = QUrl(QInputDialog::getText(this, CONNECT_TEXT, WS_URI_TEXT, QLineEdit::Normal, uri.toString(), &validUri, Qt::WindowCloseButtonHint));
+    if (validUri) uri = newUri;
     closeConnection();
 }
 
@@ -56,6 +58,7 @@ void MonitorWindow::connected() {
 
 void MonitorWindow::disconnected() {
     socket.sendTextMessage(APP_NAME + DISCONNECTED_MESSAGE);
+    statusBar()->showMessage(DISCONNECTED_TEXT);
 }
 
 void MonitorWindow::messageReceived(QString message) {
