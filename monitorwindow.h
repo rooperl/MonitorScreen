@@ -17,7 +17,7 @@
 #include "ui_monitorwindow.h"
 
 const short TICK_LENGTH = 50;
-const short WINDOW_HEIGHT_OFFSET = 50;
+const short HEIGHT_OFFSET = 50;
 const short TEXT_LENGTH_MIN = 7;
 const short SIZE_DIFF_TOLERANCE = 1;
 const float SIZE_PERCENTAGE = 0.9f;

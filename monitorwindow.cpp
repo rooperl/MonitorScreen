@@ -9,15 +9,14 @@ MonitorWindow::MonitorWindow(QUrl quri, QWidget *parent) : uri(quri),
     setWindowState(Qt::WindowMaximized);
     QBoxLayout *layout = new QBoxLayout(QBoxLayout::TopToBottom);
     centralWidget()->setLayout(layout);
-    windowSize.setWidth(rect().width());
-    windowSize.setHeight(rect().height());
+    windowSize = rect().size();
     statusBar()->showMessage(DISCONNECTED_TEXT);
 
     QObject::connect(&socket, SIGNAL(connected()), this, SLOT(connected()));
     QObject::connect(&socket, SIGNAL(disconnected()), this,
-                     SLOT(disconnected()));
+                                                SLOT(disconnected()));
     QObject::connect(&socket, SIGNAL(textMessageReceived(QString)), this,
-                     SLOT(messageReceived(QString)));
+                                                SLOT(messageReceived(QString)));
 
     text = new QLabel(this);
     text->setAlignment(Qt::AlignCenter);
@@ -95,22 +94,22 @@ void MonitorWindow::closeConnection() {
 void MonitorWindow::resizeText() {
     double widthFactor =
             QFontMetrics(text->font()).width(processText(text->text()))
-            / double(rect().width());
+                                                    / double(rect().width());
 
     double heightFactor = QFontMetrics(text->font()).height()
-            / double(rect().width());
+                                    / (double(rect().height()) - HEIGHT_OFFSET);
 
-    int pointSize_old = font.pointSize();
-    int pointSize_new = pointSize_old;
+    double pointSize_old = font.pointSize();
+    double pointSize_new = pointSize_old;
+
     pointSize_new /= widthFactor > heightFactor ?
-                widthFactor / SIZE_PERCENTAGE : heightFactor / SIZE_PERCENTAGE;
+            widthFactor / SIZE_PERCENTAGE : heightFactor / SIZE_PERCENTAGE;
 
     if (pointSize_new > 0 && !isSimilarSize(pointSize_old, pointSize_new)) {
         font.setPointSize(pointSize_new);
     }
     text->setFont(font);
-    windowSize.setWidth(rect().width());
-    windowSize.setHeight(rect().height());
+    windowSize = rect().size();
 }
 
 bool MonitorWindow::isSimilarSize(int oldN, int newN) {
@@ -130,6 +129,5 @@ void MonitorWindow::update() {
     if (socket.state() == QAbstractSocket::UnconnectedState && !uri.isEmpty()) {
         socket.open(QUrl(uri));
     }
-    if (windowSize.width() != rect().width()
-            || windowSize.height() != rect().height()) resizeText();
+    if (windowSize != rect().size()) resizeText();
 }
