@@ -59,7 +59,7 @@ void MonitorWindow::connected() {
 
     if (!configFile.open(QIODevice::WriteOnly)) return;
     QJsonDocument configDocument(configObject);
-    configFile.write(configDocument.toJson());
+    configFile.write(configDocument.toJson(QJsonDocument::Compact));
 }
 
 void MonitorWindow::disconnected() {

@@ -10,6 +10,8 @@ WebSocketTest::WebSocketTest(QWidget *parent) :
     textEdit = ui->textEdit;
     QShortcut *shortcut = new QShortcut(QKeySequence(SEND_SHORTCUT), this);
     QObject::connect(shortcut, SIGNAL(activated()), this, SLOT(sendMessage()));
+    shortcut = new QShortcut(QKeySequence(PREV_SHORTCUT), this);
+    QObject::connect(shortcut, SIGNAL(activated()), this, SLOT(prevMessage()));
 
     if (server->listen(QHostAddress::Any, PORT)) {
         textBrowser->append(SERVER_LISTENING_TEXT + QString::number(PORT)
@@ -46,8 +48,13 @@ void WebSocketTest::messageReceived(QString message) {
 }
 
 void WebSocketTest::sendMessage() {
-    messageReceived(textEdit->toPlainText());
+    prevText = textEdit->toPlainText();
+    messageReceived(prevText);
     textEdit->clear();
+}
+
+void WebSocketTest::prevMessage() {
+    textEdit->setText(prevText);
 }
 
 void WebSocketTest::disconnected() {
@@ -62,6 +69,7 @@ void WebSocketTest::on_actionExit_triggered(){
 }
 
 void WebSocketTest::on_actionTest_Message_triggered() {
+    prevText = TEST_MESSAGE;
     messageReceived(TEST_MESSAGE);
 }
 
