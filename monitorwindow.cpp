@@ -7,8 +7,10 @@ MonitorWindow::MonitorWindow(QUrl quri, QWidget *parent) : uri(quri),
     ui->setupUi(this);
     resize(QDesktopWidget().availableGeometry(this).size() * 0.5);
     setWindowState(Qt::WindowMaximized);
-    QBoxLayout *layout = new QBoxLayout(QBoxLayout::TopToBottom);
+    QBoxLayout *layout = new QBoxLayout(QBoxLayout::RightToLeft);
     centralWidget()->setLayout(layout);
+    parameterLayout = new QBoxLayout(QBoxLayout::TopToBottom);
+    layout->addLayout(parameterLayout);
     windowSize = rect().size();
     statusBar()->showMessage(DISCONNECTED_TEXT);
 
@@ -47,7 +49,7 @@ void MonitorWindow::on_actionConnect_triggered() {
     QUrl newUri = QUrl(QInputDialog::getText(this, CONNECT_TEXT, WS_URI_TEXT,
     QLineEdit::Normal, uri.toString(), &validUri, Qt::WindowCloseButtonHint));
 
-    if (validUri) uri = newUri;
+    if (validUri && !isWss(newUri)) uri = newUri;
     closeConnection();
 }
 
@@ -72,17 +74,38 @@ void MonitorWindow::messageReceived(QString message) {
     QJsonObject jsonObject = jsonMessage.object();
     message = jsonObject[JSON_VALUE].toString();
 
+    if (jsonObject[JSON_NAME].toString() != "") {
+        if (!(parameterSet.contains(jsonObject[JSON_NAME].toString()))) {
+            parameterSet.insert(jsonObject[JSON_NAME].toString());
+            QToolButton *selectButton = new QToolButton;
+            selectButton->setText(jsonObject[JSON_NAME].toString());
+            selectButton->setStyleSheet(BUTTON_STYLE);
+            selectButton->setMinimumWidth(BUTTON_WIDTH);
+            QObject::connect(selectButton, &QToolButton::clicked, this,
+                [=] { parameterSelected(jsonObject[JSON_NAME].toString()); } );
+            parameterLayout->addWidget(selectButton);
+        }
+        lastValues[jsonObject[JSON_NAME].toString()] =
+                        jsonObject[JSON_VALUE].toString();
+        lastTimes[jsonObject[JSON_NAME].toString()] =
+                        jsonObject[JSON_TIME].toString();
+    }
+
     QString statusMessage = uri.toString();
     if (jsonObject[JSON_NAME].toString() != "") {
         statusMessage += STATUS_DELIMITER + jsonObject[JSON_NAME].toString();
     }
+
     if (jsonObject[JSON_TIME].toString() != "") {
         statusMessage += STATUS_DELIMITER + jsonObject[JSON_TIME].toString();
     }
 
-    statusBar()->showMessage(statusMessage);
-    text->setText(message);
-    resizeText();
+    if (selectedParameter == jsonObject[JSON_NAME].toString()
+                || parameterSet.count() < PARAMETER_THRESHOLD) {
+        statusBar()->showMessage(statusMessage);
+        text->setText(message);
+        resizeText();
+    }
 }
 
 void MonitorWindow::closeConnection() {
@@ -94,7 +117,7 @@ void MonitorWindow::closeConnection() {
 void MonitorWindow::resizeText() {
     double widthFactor =
             QFontMetrics(text->font()).width(processText(text->text()))
-                                                    / double(rect().width());
+                    / (double(rect().width()) - BUTTON_WIDTH - BUTTON_OFFSET);
 
     double heightFactor = QFontMetrics(text->font()).height()
                                     / (double(rect().height()) - HEIGHT_OFFSET);
@@ -112,6 +135,19 @@ void MonitorWindow::resizeText() {
     windowSize = rect().size();
 }
 
+void MonitorWindow::parameterSelected(QString parameter) {
+    selectedParameter = parameter;
+    QString statusMessage = uri.toString();
+    statusMessage += STATUS_DELIMITER + parameter;
+
+    if (lastTimes[parameter] != "") {
+        statusMessage += STATUS_DELIMITER + lastTimes[parameter];
+    }
+    statusBar()->showMessage(statusMessage);
+    text->setText(lastValues[parameter]);
+    resizeText();
+}
+
 bool MonitorWindow::isSimilarSize(int oldN, int newN) {
     // Returns true if the difference between two values
     // is less than or equal to a specified tolerance value
@@ -123,6 +159,11 @@ QString MonitorWindow::processText(QString text) {
         text = " " + text + " ";
     }
     return text;
+}
+
+bool MonitorWindow::isWss(QUrl uri) {
+    // Returns true if an URI uses the WSS scheme
+    return uri.scheme() == WSS_SCHEME;
 }
 
 void MonitorWindow::update() {
