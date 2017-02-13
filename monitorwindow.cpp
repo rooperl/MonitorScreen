@@ -5,12 +5,15 @@ MonitorWindow::MonitorWindow(QUrl quri, QWidget *parent) : uri(quri),
     QMainWindow(parent), ui(new Ui::MonitorWindow) {
 
     ui->setupUi(this);
-    resize(QDesktopWidget().availableGeometry(this).size() * 0.5);
+    ui->actionDisconnect->setEnabled(false);
+    ui->actionClear_parameters->setEnabled(false);
+
+    resize(QDesktopWidget().availableGeometry(this).size() * WINDOW_INIT_RATIO);
     setWindowState(Qt::WindowMaximized);
-    QBoxLayout *layout = new QBoxLayout(QBoxLayout::RightToLeft);
-    centralWidget()->setLayout(layout);
+    layout = new QBoxLayout(QBoxLayout::RightToLeft);
     parameterLayout = new QBoxLayout(QBoxLayout::TopToBottom);
     layout->addLayout(parameterLayout);
+    centralWidget()->setLayout(layout);
     windowSize = rect().size();
     statusBar()->showMessage(DISCONNECTED_TEXT);
 
@@ -23,10 +26,12 @@ MonitorWindow::MonitorWindow(QUrl quri, QWidget *parent) : uri(quri),
     text = new QLabel(this);
     text->setAlignment(Qt::AlignCenter);
     layout->addWidget(text);
+    createParameterList();
 
     QTimer *timer = new QTimer(this);
     QObject::connect(timer, SIGNAL(timeout()), this, SLOT(update()));
     timer->start(TICK_LENGTH);
+    autoConnect = true;
 }
 
 MonitorWindow::~MonitorWindow() {
@@ -40,17 +45,34 @@ void MonitorWindow::on_actionExit_triggered() {
 }
 
 void MonitorWindow::on_actionConnect_triggered() {
-    if (socket.state() == QAbstractSocket::ConnectedState) {
-        if (QMessageBox::question(this, APP_NAME, DISCONNECT_CONFIRM_TEXT,
-            QMessageBox::Yes|QMessageBox::No) == QMessageBox::No) return;
-    }
-    bool validUri;
+    if (socket.state() == QAbstractSocket::ConnectedState
+            && QMessageBox::question(this, APP_NAME, DISCONNECT_CONFIRM_TEXT)
+            == QMessageBox::No) return;
 
+    bool validUri;
     QUrl newUri = QUrl(QInputDialog::getText(this, CONNECT_TEXT, WS_URI_TEXT,
     QLineEdit::Normal, uri.toString(), &validUri, Qt::WindowCloseButtonHint));
 
     if (validUri && !isWss(newUri)) uri = newUri;
     closeConnection();
+    autoConnect = true;
+}
+
+void MonitorWindow::on_actionDisconnect_triggered() {
+    if (socket.state() == QAbstractSocket::ConnectedState
+            && QMessageBox::question(this, APP_NAME, DISCONNECT_CONFIRM_TEXT)
+            == QMessageBox::Yes) closeConnection();
+}
+
+void MonitorWindow::on_actionClear_parameters_triggered() {
+    if (parameterSet.size() && QMessageBox::question(this, APP_NAME,
+        CLEAR_CONFIRM_TEXT) == QMessageBox::Yes) {
+        parameterSet.clear();
+        parameterList->clear();
+        parameterLayout->removeWidget(parameterList);
+        parameterList->hide();
+        ui->actionClear_parameters->setEnabled(false);
+    }
 }
 
 void MonitorWindow::connected() {
@@ -62,62 +84,68 @@ void MonitorWindow::connected() {
     if (!configFile.open(QIODevice::WriteOnly)) return;
     QJsonDocument configDocument(configObject);
     configFile.write(configDocument.toJson(QJsonDocument::Compact));
+    ui->actionDisconnect->setEnabled(true);
+    autoConnect = true;
 }
 
 void MonitorWindow::disconnected() {
     socket.sendTextMessage(APP_NAME + DISCONNECTED_MESSAGE);
     statusBar()->showMessage(DISCONNECTED_TEXT);
+    ui->actionDisconnect->setEnabled(false);
 }
 
 void MonitorWindow::messageReceived(QString message) {
     QJsonDocument jsonMessage = QJsonDocument::fromJson(message.toUtf8());
     QJsonObject jsonObject = jsonMessage.object();
+    QString name = jsonObject[JSON_NAME].toString();
     message = jsonObject[JSON_VALUE].toString();
 
-    if (jsonObject[JSON_NAME].toString() != "") {
-        if (!(parameterSet.contains(jsonObject[JSON_NAME].toString()))) {
-            parameterSet.insert(jsonObject[JSON_NAME].toString());
-            QToolButton *selectButton = new QToolButton;
-            selectButton->setText(jsonObject[JSON_NAME].toString());
-            selectButton->setStyleSheet(BUTTON_STYLE);
-            selectButton->setMinimumWidth(BUTTON_WIDTH);
-            QObject::connect(selectButton, &QToolButton::clicked, this,
-                [=] { parameterSelected(jsonObject[JSON_NAME].toString()); } );
-            parameterLayout->addWidget(selectButton);
+    if (name != "") {
+        if (!(parameterSet.contains(name))) {
+            parameterSet.insert(name);
+            parameterList->addItem(name);
+            ui->actionClear_parameters->setEnabled(true);
+
+            if (parameterSet.size() == PARAM_THRESHOLD) {
+                parameterLayout->addWidget(parameterList);
+            }
+
+            if (parameterSet.size() >= PARAM_THRESHOLD) {
+                parameterList->show();
+            }
         }
-        lastValues[jsonObject[JSON_NAME].toString()] =
-                        jsonObject[JSON_VALUE].toString();
-        lastTimes[jsonObject[JSON_NAME].toString()] =
-                        jsonObject[JSON_TIME].toString();
+        lastValues[name] = jsonObject[JSON_VALUE].toString();
+        lastTimes[name] = jsonObject[JSON_TIME].toString();
     }
+    else if (parameterSet.size()) return;
 
     QString statusMessage = uri.toString();
-    if (jsonObject[JSON_NAME].toString() != "") {
-        statusMessage += STATUS_DELIMITER + jsonObject[JSON_NAME].toString();
+    if (name != "") {
+        statusMessage += STATUS_DELIMITER + name;
     }
 
     if (jsonObject[JSON_TIME].toString() != "") {
         statusMessage += STATUS_DELIMITER + jsonObject[JSON_TIME].toString();
     }
 
-    if (selectedParameter == jsonObject[JSON_NAME].toString()
-                || parameterSet.count() < PARAMETER_THRESHOLD) {
+    if (selectedParameter == name || parameterSet.count() < PARAM_THRESHOLD) {
         statusBar()->showMessage(statusMessage);
         text->setText(message);
-        resizeText();
     }
+    resizeText();
 }
 
 void MonitorWindow::closeConnection() {
     socket.sendTextMessage(APP_NAME + DISCONNECTED_MESSAGE);
     socket.close();
     statusBar()->showMessage(DISCONNECTED_TEXT);
+    autoConnect = false;
 }
 
 void MonitorWindow::resizeText() {
     double widthFactor =
             QFontMetrics(text->font()).width(processText(text->text()))
-                    / (double(rect().width()) - BUTTON_WIDTH - BUTTON_OFFSET);
+            / (double(rect().width()) - PARAM_LIST_WIDTH - PARAM_LIST_OFFSET);
 
     double heightFactor = QFontMetrics(text->font()).height()
                                     / (double(rect().height()) - HEIGHT_OFFSET);
@@ -133,6 +161,20 @@ void MonitorWindow::resizeText() {
     }
     text->setFont(font);
     windowSize = rect().size();
+}
+
+void MonitorWindow::createParameterList() {
+    parameterList = new QListWidget;
+    parameterList->setFixedWidth(PARAM_LIST_WIDTH);
+    parameterList->setStyleSheet(PARAM_LIST_STYLE);
+
+    QObject::connect(parameterList,
+                     SIGNAL(itemPressed(QListWidgetItem*)), this,
+                     SLOT(parameterClicked(QListWidgetItem*)));
+
+    QObject::connect(parameterList,
+                     SIGNAL(itemActivated(QListWidgetItem*)), this,
+                     SLOT(parameterClicked(QListWidgetItem*)));
 }
 
 void MonitorWindow::parameterSelected(QString parameter) {
@@ -166,9 +208,14 @@ bool MonitorWindow::isWss(QUrl uri) {
     return uri.scheme() == WSS_SCHEME;
 }
 
+void MonitorWindow::parameterClicked(QListWidgetItem* parameter) {
+    parameterSelected(parameter->text());
+}
+
 void MonitorWindow::update() {
-    if (socket.state() == QAbstractSocket::UnconnectedState && !uri.isEmpty()) {
-        socket.open(QUrl(uri));
-    }
+    // Called every time the timer timeouts, frequency set by const TICK_LENGTH
+    if (socket.state() == QAbstractSocket::UnconnectedState
+            && !uri.isEmpty() && autoConnect) socket.open(QUrl(uri));
+
     if (windowSize != rect().size()) resizeText();
 }
