@@ -28,6 +28,10 @@ MonitorWindow::MonitorWindow(QUrl quri, QWidget *parent) : uri(quri),
     layout->addWidget(text);
     createParameterList();
 
+    QShortcut *deleteShortcut = new QShortcut(QKeySequence("Delete"), this);
+    QObject::connect(deleteShortcut, SIGNAL(activated()), this,
+                                        SLOT(parameterDeleted()));
+
     QTimer *timer = new QTimer(this);
     QObject::connect(timer, SIGNAL(timeout()), this, SLOT(update()));
     timer->start(TICK_LENGTH);
@@ -85,7 +89,7 @@ void MonitorWindow::connected() {
     QJsonDocument configDocument(configObject);
     configFile.write(configDocument.toJson(QJsonDocument::Compact));
     ui->actionDisconnect->setEnabled(true);
-    autoConnect = true;
+    statusBar()->showMessage(uri.toString());
 }
 
 void MonitorWindow::disconnected() {
@@ -104,15 +108,13 @@ void MonitorWindow::messageReceived(QString message) {
         if (!(parameterSet.contains(name))) {
             parameterSet.insert(name);
             parameterList->addItem(name);
-            ui->actionClear_parameters->setEnabled(true);
 
             if (parameterSet.size() == PARAM_THRESHOLD) {
                 parameterLayout->addWidget(parameterList);
+                ui->actionClear_parameters->setEnabled(true);
             }
 
-            if (parameterSet.size() >= PARAM_THRESHOLD) {
-                parameterList->show();
-            }
+            if (parameterSet.size() >= PARAM_THRESHOLD) parameterList->show();
         }
         lastValues[name] = jsonObject[JSON_VALUE].toString();
         lastTimes[name] = jsonObject[JSON_TIME].toString();
@@ -210,6 +212,17 @@ bool MonitorWindow::isWss(QUrl uri) {
 
 void MonitorWindow::parameterClicked(QListWidgetItem* parameter) {
     parameterSelected(parameter->text());
+}
+
+void MonitorWindow::parameterDeleted() {
+    // Removes the selected parameter from the parameter list
+    if (parameterList->currentItem()) {
+        parameterSet.remove(parameterList->currentItem()->text());
+        delete parameterList->currentItem();
+
+        if (parameterSet.isEmpty()) parameterList->hide();
+        else parameterSelected(parameterList->currentItem()->text());
+    }
 }
 
 void MonitorWindow::update() {

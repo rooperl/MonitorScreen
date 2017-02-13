@@ -14,6 +14,7 @@
 #include <QWebSocket>
 #include <QBoxLayout>
 #include <QListWidget>
+#include <QShortcut>
 #include <QDebug>
 #include "ui_monitorwindow.h"
 
@@ -73,6 +74,7 @@ private slots:
     void disconnected();
     void messageReceived(QString message);
     void parameterClicked(QListWidgetItem* parameter);
+    void parameterDeleted();
     void update();
 
 private:
