@@ -15,6 +15,7 @@
 #include <QBoxLayout>
 #include <QListWidget>
 #include <QShortcut>
+#include <QSettings>
 #include <QDebug>
 #include "ui_monitorwindow.h"
 
@@ -29,6 +30,7 @@ const float SIZE_PERCENTAGE = 0.9f;
 const float WINDOW_INIT_RATIO = 0.5f;
 
 const QString APP_NAME = "MonitorScreen";
+const QString ORGANIZATION = "Roope Lindström";
 const QString EXIT_CONFIRM_TEXT = "Are you sure you want to exit?";
 const QString CLEAR_CONFIRM_TEXT = "Are you sure you want to clear "
                                    "the current parameter list?";
@@ -46,7 +48,7 @@ const QString THREE_DOTS = "...";
 const QString JSON_NAME = "name";
 const QString JSON_VALUE = "value";
 const QString JSON_TIME = "time";
-const QString JSON_URI = "uri";
+const QString URI_SETTING = "uri";
 const QString CONFIG_FILE_NAME = "config.json";
 
 class Ui::MonitorWindow;
@@ -92,6 +94,7 @@ private:
     QString selectedParameter;
     QHash<QString, QString> lastValues;
     QHash<QString, QString> lastTimes;
+    QSettings settings;
     bool autoConnect;
 };
 
