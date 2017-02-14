@@ -1,0 +1,3 @@
+INPUT = main.cpp monitorwindow.cpp monitorwindow.h
+GENERATE_LATEX = NO
+EXTRACT_PRIVATE = YES

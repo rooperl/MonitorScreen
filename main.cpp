@@ -3,10 +3,7 @@
  */
 #include "monitorwindow.h"
 /*!
- * \brief main
- * \param argc
- * \param argv
- * \return
+ * \brief Main function
  */
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
