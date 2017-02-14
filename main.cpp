@@ -1,5 +1,13 @@
+/*!
+ * \file main.cpp
+ */
 #include "monitorwindow.h"
-
+/*!
+ * \brief main
+ * \param argc
+ * \param argv
+ * \return
+ */
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     QCoreApplication::setOrganizationName(ORGANIZATION);

@@ -1,3 +1,6 @@
+/*!
+ * \file monitorwindow.cpp
+ */
 #include "monitorwindow.h"
 #include "ui_monitorwindow.h"
 
@@ -28,7 +31,8 @@ MonitorWindow::MonitorWindow(QUrl quri, QWidget *parent) : uri(quri),
     layout->addWidget(text);
     createParameterList();
 
-    QShortcut *deleteShortcut = new QShortcut(QKeySequence("Delete"), this);
+    QShortcut *deleteShortcut = new QShortcut(QKeySequence(DELETE_SHORTCUT),
+                                                                        this);
     QObject::connect(deleteShortcut, SIGNAL(activated()), this,
                                         SLOT(parameterDeleted()));
 
@@ -44,13 +48,15 @@ MonitorWindow::~MonitorWindow() {
 }
 
 void MonitorWindow::on_actionExit_triggered() {
-    // Called when exiting via the context menu
+    /*!
+     * \brief Called when exiting via menu
+     */
     if (QMessageBox::question(this, APP_NAME, EXIT_CONFIRM_TEXT,
     QMessageBox::Yes|QMessageBox::No) == QMessageBox::Yes) QApplication::quit();
 }
 
 void MonitorWindow::on_actionConnect_triggered() {
-    // Called when connecting via the context menu
+    /*! \brief Called when connecting via menu */
     if (socket.state() == QAbstractSocket::ConnectedState
             && QMessageBox::question(this, APP_NAME, DISCONNECT_CONFIRM_TEXT)
             == QMessageBox::No) return;
@@ -65,14 +71,18 @@ void MonitorWindow::on_actionConnect_triggered() {
 }
 
 void MonitorWindow::on_actionDisconnect_triggered() {
-    // Called when closing the connection via the context menu
+    /*!
+     * \brief Called when closing the connection via menu
+     */
     if (socket.state() == QAbstractSocket::ConnectedState
             && QMessageBox::question(this, APP_NAME, DISCONNECT_CONFIRM_TEXT)
             == QMessageBox::Yes) closeConnection();
 }
 
 void MonitorWindow::on_actionClear_parameters_triggered() {
-    // Called when
+    /*!
+     * \brief Called when clearing the parameter list via menu
+     */
     if (parameterSet.size() && QMessageBox::question(this, APP_NAME,
         CLEAR_CONFIRM_TEXT) == QMessageBox::Yes) {
         parameterSet.clear();
@@ -84,7 +94,9 @@ void MonitorWindow::on_actionClear_parameters_triggered() {
 }
 
 void MonitorWindow::connected() {
-    // Called when the client is connected
+    /*!
+     * \brief Called when the client is connected
+     */
     socket.sendTextMessage(APP_NAME + CONNECTED_TO_TEXT + uri.toString());
     settings.setValue(URI_SETTING, uri);
     ui->actionDisconnect->setEnabled(true);
@@ -92,14 +104,18 @@ void MonitorWindow::connected() {
 }
 
 void MonitorWindow::disconnected() {
-    // Called when the client is disconnected
+    /*!
+     * \brief Called when the client is disconnected
+     */
     socket.sendTextMessage(APP_NAME + DISCONNECTED_MESSAGE);
     statusBar()->showMessage(DISCONNECTED_TEXT);
     ui->actionDisconnect->setEnabled(false);
 }
 
 void MonitorWindow::messageReceived(QString message) {
-    // Called when the client receives a message
+    /*!
+     * \brief Called when the client receives a message
+     */
     QJsonDocument jsonMessage = QJsonDocument::fromJson(message.toUtf8());
     QJsonObject jsonObject = jsonMessage.object();
     QString name = jsonObject[JSON_NAME].toString();
@@ -139,15 +155,21 @@ void MonitorWindow::messageReceived(QString message) {
 }
 
 void MonitorWindow::closeConnection() {
-    // Closes the current WebSocket connection
-    socket.sendTextMessage(APP_NAME + DISCONNECTED_MESSAGE);
-    socket.close();
+    /*!
+     * \brief Closes the current WebSocket connection
+     */
+    if (socket.state() == QAbstractSocket::ConnectedState) {
+        socket.sendTextMessage(APP_NAME + DISCONNECTED_MESSAGE);
+        socket.close();
+    }
     statusBar()->showMessage(DISCONNECTED_TEXT);
     autoConnect = false;
 }
 
 void MonitorWindow::resizeText() {
-    // Scales the displayed text to fit the current window size
+    /*!
+     * \brief Scales the displayed text to fit the current window size
+     */
     double widthFactor =
             QFontMetrics(text->font()).width(processText(text->text()))
             / (double(rect().width()) - PARAM_LIST_WIDTH - PARAM_LIST_OFFSET);
@@ -169,7 +191,9 @@ void MonitorWindow::resizeText() {
 }
 
 void MonitorWindow::createParameterList() {
-    // Creates the parameter list widget
+    /*!
+     * \brief Creates the parameter list widget
+     */
     parameterList = new QListWidget;
     parameterList->setFixedWidth(PARAM_LIST_WIDTH);
     parameterList->setStyleSheet(PARAM_LIST_STYLE);
@@ -184,6 +208,9 @@ void MonitorWindow::createParameterList() {
 }
 
 void MonitorWindow::parameterSelected(QString parameter) {
+    /*!
+     * \brief Called when a parameter is selected
+     */
     selectedParameter = parameter;
     QString statusMessage = uri.toString();
     statusMessage += STATUS_DELIMITER + parameter;
@@ -197,13 +224,17 @@ void MonitorWindow::parameterSelected(QString parameter) {
 }
 
 bool MonitorWindow::isSimilarSize(int oldN, int newN) {
-    // Returns true if the difference between two values
-    // is less than or equal to a specified tolerance value
+    /*!
+     * \brief Returns true if the difference between two values
+     *        is less than or equal to a specified tolerance value
+     */
     return (oldN > newN ? oldN - newN : newN - oldN) <= SIZE_DIFF_TOLERANCE;
 }
 
 QString MonitorWindow::processText(QString text) {
-    // Processes the text to be displayed
+    /*!
+     * \brief Processes the text to be displayed
+     */
     while (text.length() < TEXT_LENGTH_MIN) {
         text = " " + text + " ";
     }
@@ -211,17 +242,23 @@ QString MonitorWindow::processText(QString text) {
 }
 
 bool MonitorWindow::isWss(QUrl uri) {
-    // Returns true if an URI uses the WSS scheme
+    /*!
+     * \brief Returns true if an URI uses the WSS scheme
+     */
     return uri.scheme() == WSS_SCHEME;
 }
 
 void MonitorWindow::parameterClicked(QListWidgetItem* parameter) {
-    // Called when a parameter is selected
+    /*!
+     * \brief Called when a parameter is selected
+     */
     parameterSelected(parameter->text());
 }
 
 void MonitorWindow::parameterDeleted() {
-    // Removes the selected parameter from the parameter list
+    /*!
+     * \brief Removes the selected parameter from the parameter list
+     */
     if (parameterList->currentItem()) {
         parameterSet.remove(parameterList->currentItem()->text());
         delete parameterList->currentItem();
@@ -235,7 +272,10 @@ void MonitorWindow::parameterDeleted() {
 }
 
 void MonitorWindow::update() {
-    // Called every time the timer timeouts, frequency set by const TICK_LENGTH
+    /*!
+     * \brief Called every time the timer timeouts,
+     *        frequency set by const short TICK_LENGTH
+     */
     if (socket.state() == QAbstractSocket::UnconnectedState
             && !uri.isEmpty() && autoConnect) socket.open(QUrl(uri));
 

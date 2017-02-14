@@ -1,3 +1,6 @@
+/*!
+ * \file monitorwindow.h
+ */
 #ifndef MONITORWINDOW_H
 #define MONITORWINDOW_H
 
@@ -19,7 +22,7 @@
 #include <QDebug>
 #include "ui_monitorwindow.h"
 
-const short TICK_LENGTH = 50;
+const short TICK_LENGTH = 50; /*!< Timer timeout frequency in milliseconds */
 const short HEIGHT_OFFSET = 50;
 const short TEXT_LENGTH_MIN = 7;
 const short PARAM_LIST_WIDTH = 128;
@@ -30,10 +33,10 @@ const float SIZE_PERCENTAGE = 0.9f;
 const float WINDOW_INIT_RATIO = 0.5f;
 
 const QString APP_NAME = "MonitorScreen";
-const QString ORGANIZATION = "Roope Lindström";
+const QString ORGANIZATION = "MonitorScreen";
 const QString EXIT_CONFIRM_TEXT = "Are you sure you want to exit?";
-const QString CLEAR_CONFIRM_TEXT = "Are you sure you want to clear "
-                                   "the current parameter list?";
+const QString CLEAR_CONFIRM_TEXT =
+                "Are you sure you want to clear the current parameter list?";
 const QString DISCONNECT_CONFIRM_TEXT = "End current connection?";
 const QString DISCONNECTED_TEXT = "Disconnected";
 const QString DISCONNECTED_MESSAGE = " disconnected";
@@ -43,15 +46,17 @@ const QString WS_URI_TEXT = "WebSocket URI";
 const QString STATUS_DELIMITER = " - ";
 const QString WSS_SCHEME = "wss";
 const QString PARAM_LIST_STYLE = "font-size: 12pt;";
-const QString THREE_DOTS = "...";
+const QString DELETE_SHORTCUT = "Delete";
 
 const QString JSON_NAME = "name";
 const QString JSON_VALUE = "value";
 const QString JSON_TIME = "time";
-const QString URI_SETTING = "uri";
-const QString CONFIG_FILE_NAME = "config.json";
+const QString URI_SETTING = "WebSocketURI";
 
 class Ui::MonitorWindow;
+/*!
+ * \brief The MonitorWindow class
+ */
 class MonitorWindow : public QMainWindow {
     Q_OBJECT
 
